@@ -9,42 +9,30 @@ export async function onRequestGet(context) {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const GITHUB_RAW = 'https://raw.githubusercontent.com/hounmetinjeremy-cmyk/PESXplorer/main/players.json';
-  const CACHE_TTL = 86400;
-
   try {
-    const response = await fetch(GITHUB_RAW, { cf: { cacheTtl: CACHE_TTL } });
-    if (!response.ok) {
-      return new Response('Failed to load players data: ' + response.status, {
-        status: 502,
+    // Lire players.json depuis le bucket R2 lié à PLAYERS_DATA
+    const object = await context.env.PLAYERS_DATA.get('players.json');
+
+    if (!object) {
+      return new Response('players.json not found in R2', {
+        status: 404,
         headers: corsHeaders,
       });
     }
 
-    const jsonText = await response.text();
-    const compressed = await compress(jsonText);
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set('Access-Control-Allow-Origin', '*');
+    headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    headers.set('Access-Control-Allow-Headers', 'Content-Type');
+    headers.set('Content-Type', 'application/json');
+    headers.set('Cache-Control', 'public, max-age=86400');
 
-    return new Response(compressed, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-        'Content-Encoding': 'gzip',
-        'Cache-Control': 'public, max-age=' + CACHE_TTL,
-        'Vary': 'Accept-Encoding',
-      },
-    });
+    return new Response(object.body, { headers });
   } catch (err) {
-    return new Response('Error: ' + err.message, { status: 500, headers: corsHeaders });
+    return new Response('Error: ' + err.message, {
+      status: 500,
+      headers: corsHeaders,
+    });
   }
-}
-
-async function compress(text) {
-  const encoder = new TextEncoder();
-  const input = encoder.encode(text);
-  const cs = new CompressionStream('gzip');
-  const writer = cs.writable.getWriter();
-  writer.write(input);
-  writer.close();
-  return new Response(cs.readable).arrayBuffer();
 }
