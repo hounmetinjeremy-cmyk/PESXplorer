@@ -5,7 +5,3 @@ compatibility_date = "2024-11-01"
 binding = "DB"
 database_name = "pesxplorer-db"
 database_id = "cd1dbb09-b49d-4b61-81fb-c38246072e2d"
-
-[[r2_buckets]]
-binding = "PES_DATA"
-bucket_name = "pesxplorer-data"
