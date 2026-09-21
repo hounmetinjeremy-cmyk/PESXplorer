@@ -1,0 +1,46 @@
+name: Optimize for Cloudflare Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'players.json'
+      - 'script.js'
+      - 'index.html'
+      - 'style.css'
+      - 'optimize.py'
+      - '.github/workflows/optimize-cloudflare.yml'
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run optimizer
+        run: python3 optimize.py
+
+      - name: List generated files
+        run: ls -lh *.json.gz 2>/dev/null || true
+
+      - name: Commit optimized build to cloudflare-optimized branch
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git checkout -B cloudflare-optimized
+          git add -A
+          git commit -m "Optimize for Cloudflare Pages (gzip players.json) [skip ci]" || echo "No changes to commit"
+          git push origin cloudflare-optimized --force
