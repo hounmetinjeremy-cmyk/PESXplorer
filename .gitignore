@@ -1,0 +1,5 @@
+# Ignore the large player database; it is served from Cloudflare R2
+players.json
+*.log
+.DS_Store
+node_modules/
