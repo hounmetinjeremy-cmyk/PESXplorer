@@ -5,9 +5,6 @@ Optimizer for Cloudflare Pages.
 Reads players.json, gzip-compresses it (and optionally splits it if > 25 MiB),
 patches script.js to load the compressed chunks via DecompressionStream,
 and writes the _headers file required by Cloudflare Pages.
-
-Place this file at the root of the main branch and run it during CI/CD or
-locally before pushing to your deployment branch.
 """
 import gzip
 import json
@@ -73,9 +70,11 @@ def patch_script_js(files):
     const DATA_FILES = {files};
 
     async function decompressGzip(url) {{
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Failed to load ${{url}}: ${{res.status}}`);
-        const compressed = await res.arrayBuffer();
+        const response = await fetch(url);
+        if (!response.ok) {{
+            throw new Error(`Failed to load ${{url}} (Error: ${{response.status}})`);
+        }}
+        const compressed = await response.arrayBuffer();
         const decompressed = await new Response(
             new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'))
         ).text();
