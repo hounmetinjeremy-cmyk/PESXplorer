@@ -10,6 +10,7 @@ import gzip
 import json
 import math
 import os
+import re
 
 MAX_COMPRESSED_BYTES = 25 * 1024 * 1024
 INPUT = "players.json"
@@ -37,7 +38,6 @@ def write_single(players):
 
 
 def write_chunks(players, target_bytes):
-    # Binary search chunk size to fit target compressed size
     lo, hi = 1, len(players)
     best_size = 1
     while lo <= hi:
@@ -97,13 +97,12 @@ def patch_script_js(files):
 
     new_block = "allPlayers = await loadAllPlayers();"
 
-    if old_block not in text:
-        raise RuntimeError(
-            "Could not find the original players.json fetch block in script.js. "
-            "Please make sure script.js contains the standard fetch('players.json') call."
-        )
-
-    text = text.replace(old_block, new_block)
+    if old_block in text:
+        text = text.replace(old_block, new_block)
+    else:
+        # Fallback: search any bare fetch('players.json') line
+        text = re.sub(r"fetch\s*\(\s*['\"`]players\.json['\"`]\s*\)(?:\.json\(\)|[\s\S]{0,80}?\.json\(\))", "await loadAllPlayers()", text)
+        text = text.replace("'players.json'", "url").replace('"players.json"', "url")
 
     opener = "document.addEventListener('DOMContentLoaded', () => {"
     idx = text.find(opener)
